@@ -1,5 +1,6 @@
 use rusqlite::{params, Connection};
 use rand::seq::SliceRandom;
+use serde_json::json;
 
 // Handler for the "/" route
 pub async fn root_handler() -> &'static str {
@@ -26,5 +27,5 @@ pub async fn randomart_handler() {
         .cloned()
         .collect();
 
-    println!("{:?}", random_indices);
+    json!(random_indices).to_string()
 }
