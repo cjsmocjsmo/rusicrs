@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
 
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RandomArt {
 	pub AlbumId: String,
 	pub HttpThumbPath: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Song {
 	pub Idx: String,
@@ -13,24 +15,28 @@ pub struct Song {
 	pub MusicId: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ArtistCount {
     pub alpha: String,
     pub count: i64,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AlbumCount {
     pub alpha: String,
     pub count: i64,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SongCount {
     pub alpha: String,
     pub count: i64,
 }
 
+#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AlbumSongs {
     pub page: i32,
@@ -38,6 +44,7 @@ pub struct AlbumSongs {
     pub rusicids: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ArtistAlbums {
     pub page: i32,
@@ -45,6 +52,7 @@ pub struct ArtistAlbums {
     pub albums: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize, Ord, PartialOrd, PartialEq, Eq)]
 pub struct ArtArtidInfo {
     pub rusticid: String,
@@ -52,6 +60,7 @@ pub struct ArtArtidInfo {
     pub artistid: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize, Ord, PartialOrd, PartialEq, Eq)]
 pub struct AlbAlbidInfo {
     pub rusticid: String,
@@ -59,7 +68,7 @@ pub struct AlbAlbidInfo {
     pub albumid: String,
 }
 
-
+#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MusicImageInfo {
     pub rusicid: String,
@@ -77,6 +86,7 @@ pub struct MusicImageInfo {
     pub httpthumbpath: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MusicInfo {
     pub rusicid: String,
@@ -94,6 +104,7 @@ pub struct MusicInfo {
     pub fsizeresults: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FirstLetterInfo {
     pub rusicid: String,
@@ -107,6 +118,7 @@ pub struct FirstLetterInfo {
     pub song_first_letter: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayList {
     pub rusicid: String,
@@ -115,6 +127,7 @@ pub struct PlayList {
     pub numsongs: String,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Stats {
     pub artistcount: String,
