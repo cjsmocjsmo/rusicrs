@@ -19,6 +19,8 @@ pub async fn randomart_handler() -> impl IntoResponse {
         .query_map([], |row| row.get(0))
         .expect("Failed to fetch data");
 
+    println!("Rows: {:?}", rows);
+
     let index_list: Vec<i32> = rows
         .filter_map(Result::ok)
         .collect();
