@@ -10,7 +10,8 @@ pub async fn root_handler() -> &'static str {
 
 // Handler for the "/test" route
 pub async fn randomart_handler() -> impl IntoResponse {
-    let db_path = std::env::var("RUSIC_DB_PATH").expect("RUSIC_DB_PATH must be set");
+    // let db_path = std::env::var("RUSIC_DB_PATH").expect("RUSIC_DB_PATH must be set");
+    let db_path = "/usr/share/rusicrs/rusic.db";
     println!("DB Path: {}", db_path);
     let conn = Connection::open(db_path).expect("Failed to connect to the database");
 
@@ -18,8 +19,6 @@ pub async fn randomart_handler() -> impl IntoResponse {
     let rows = stmt
         .query_map([], |row| row.get(0))
         .expect("Failed to fetch data");
-
-    println!("Rows: {:?}", rows);
 
     let index_list: Vec<i32> = rows
         .filter_map(Result::ok)
