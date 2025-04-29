@@ -11,6 +11,7 @@ pub async fn root_handler() -> &'static str {
 // Handler for the "/test" route
 pub async fn randomart_handler() -> impl IntoResponse {
     let db_path = std::env::var("RUSIC_DB_PATH").expect("RUSIC_DB_PATH must be set");
+    println!("DB Path: {}", db_path);
     let conn = Connection::open(db_path).expect("Failed to connect to the database");
 
     let mut stmt = conn.prepare("SELECT idx FROM music_images;").expect("Failed to prepare query");
