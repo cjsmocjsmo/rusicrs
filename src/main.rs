@@ -25,7 +25,7 @@ async fn main() {
         .route("/randomart", get(utils::randomart_handler));
         
 
-    Define the address to run the server on
+    //Define the address to run the server on
     let addr = SocketAddr::from(([10, 0, 4, 76], 3000));
     println!("Listening on {}", addr);
 
