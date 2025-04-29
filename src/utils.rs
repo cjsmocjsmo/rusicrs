@@ -3,6 +3,20 @@ use rusqlite::Connection;
 use rand::seq::SliceRandom;
 use serde_json::json;
 
+pub async fn root_handler() -> impl IntoResponse {
+    let response = json!({
+        "message": "Welcome to the Rusic API",
+        "version": "1.0.0",
+        "endpoints": [
+            {
+                "path": "/randomart",
+                "description": "Get random art IDs"
+            }
+        ]
+    });
+    response.to_string()
+}
+
 pub async fn randomart_handler() -> impl IntoResponse {
     // let db_path = std::env::var("RUSIC_DB_PATH").unwrap_or_else(|_| "/usr/share/rusicrs/rusic.db".to_string());
     let db_path = "/usr/share/rusicrs/rusic.db".to_string();
