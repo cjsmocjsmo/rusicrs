@@ -1,4 +1,5 @@
-use rusqlite::{params, Connection};
+use axum::response::IntoResponse;
+use rusqlite::Connection;
 use rand::seq::SliceRandom;
 use serde_json::json;
 
