@@ -4,7 +4,8 @@ use rand::seq::SliceRandom;
 use serde_json::json;
 
 pub async fn randomart_handler() -> impl IntoResponse {
-    let db_path = std::env::var("RUSIC_DB_PATH").unwrap_or_else(|_| "/usr/share/rusicrs/rusic.db".to_string());
+    // let db_path = std::env::var("RUSIC_DB_PATH").unwrap_or_else(|_| "/usr/share/rusicrs/rusic.db".to_string());
+    let db_path = "/usr/share/rusicrs/rusic.db".to_string();
     println!("DB Path: {}", db_path);
 
     let conn = Connection::open(&db_path).expect("Failed to connect to the database");
