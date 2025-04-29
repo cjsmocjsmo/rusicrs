@@ -26,7 +26,7 @@ async fn main() {
         
 
     Define the address to run the server on
-    let addr = SocketAddr::from(([10, 0, 4, 1], 3000));
+    let addr = SocketAddr::from(([10, 0, 4, 76], 3000));
     println!("Listening on {}", addr);
 
     // let raw_addr = std::env::var("RUSIC_SOCKET_ADDR").unwrap();
