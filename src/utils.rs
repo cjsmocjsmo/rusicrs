@@ -13,7 +13,7 @@ pub async fn randomart_handler() -> impl IntoResponse {
     let db_path = std::env::var("RUSIC_DB_PATH").expect("RUSIC_DB_PATH must be set");
     let conn = Connection::open(db_path).expect("Failed to connect to the database");
 
-    let mut stmt = conn.prepare("SELECT idx FROM music_images").expect("Failed to prepare query");
+    let mut stmt = conn.prepare("SELECT idx FROM music_images;").expect("Failed to prepare query");
     let rows = stmt
         .query_map([], |row| row.get(0))
         .expect("Failed to fetch data");
@@ -21,6 +21,8 @@ pub async fn randomart_handler() -> impl IntoResponse {
     let index_list: Vec<i32> = rows
         .filter_map(Result::ok)
         .collect();
+
+    println!("Index List: {:?}", index_list);
 
     let mut rng = rand::thread_rng();
     let random_indices: Vec<i32> = index_list
