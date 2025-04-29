@@ -20,9 +20,9 @@ async fn main() {
 
     // Build the application with two routes and apply the CORS layer
     let app = Router::new()
-        .layer(cors); // Add the CORS layer to the app
+        .layer(cors) // Add the CORS layer to the app
         .route("/", get(utils::root_handler))
-        .route("/randomart", get(utils::randomart_handler))
+        .route("/randomart", get(utils::randomart_handler));
         
 
     Define the address to run the server on
