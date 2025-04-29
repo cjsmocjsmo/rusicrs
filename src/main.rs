@@ -29,9 +29,9 @@ async fn main() {
     // let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     // println!("Listening on {}", addr);
 
-    let raw_addr = std::env::var("RUSIC_SOCKET_ADDR").unwrap;
-    let raw_port = std::env::var("RUSIC_PORT").unwrap;
-    let addr = SocketAddr::from((rawaddr, raw_port));
+    let raw_addr = std::env::var("RUSIC_SOCKET_ADDR").unwrap();
+    let raw_port = std::env::var("RUSIC_PORT").unwrap();
+    let addr = SocketAddr::new(raw_addr.parse().unwrap(), raw_port.parse().unwrap());
     println!("Listening on {}", addr);
     // Run the server
     axum::Server::bind(&addr)
