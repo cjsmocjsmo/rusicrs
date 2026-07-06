@@ -69,8 +69,9 @@ pub struct AlbAlbidInfo {
 }
 
 #[allow(non_snake_case)]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct MusicImageInfo {
+    pub id: i64,
     pub rusicid: String,
     pub width: String,
     pub height: String,
