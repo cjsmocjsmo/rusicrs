@@ -9,7 +9,7 @@ use serde::Deserialize;
 use rand::seq::SliceRandom;
 use serde_json::json;
 
-use crate::types::{AlbumCount, ArtistCount, MusicImageInfo, MusicInfo};
+use crate::types::{AlbumCount, AlbumStruct, ArtistCount, ArtistForAlphaStruct, MusicImageInfo, MusicInfo, PlayList};
 
 pub async fn root_handler() -> impl IntoResponse {
     let response = json!({
@@ -384,52 +384,626 @@ pub async fn current_playing_image_handler(Query(params): Query<CurrentPlayingIm
     Json(image).into_response()
 }
 
-
-
-
-
-
-
-
-
-pub async fn artist_for_alpha_handler() -> impl IntoResponse {
-    // Placeholder implementation
-    json!({"message": "Artist for alpha endpoint"}).to_string()
+#[derive(Deserialize)]
+pub struct ArtistForAlphaQuery {
+    pub alpha: String,
 }
 
-pub async fn album_for_alpha_handler() -> impl IntoResponse {
-    // Placeholder implementation
-    json!({"message": "Album for alpha endpoint"}).to_string()
+pub async fn artist_for_alpha_handler(Query(params): Query<ArtistForAlphaQuery>) -> impl IntoResponse {
+    let db_path = match std::env::var("RUSIC_DB_PATH") {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("Missing RUSIC_DB_PATH: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "RUSIC_DB_PATH is not set"})),
+            )
+                .into_response();
+        }
+    };
+
+    let conn = match Connection::open(&db_path) {
+        Ok(conn) => conn,
+        Err(err) => {
+            eprintln!("Error opening database at {}: {}", db_path, err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to open database"})),
+            )
+                .into_response();
+        }
+    };
+
+    let mut stmt = match conn.prepare(
+        "SELECT DISTINCT artist, artistid FROM startswith WHERE artist_first_letter = ?1",
+    ) {
+        Ok(stmt) => stmt,
+        Err(err) => {
+            eprintln!("Error preparing artist_for_alpha query: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to prepare query"})),
+            )
+                .into_response();
+        }
+    };
+
+    let rows = match stmt.query_map([params.alpha], |row| {
+        Ok(ArtistForAlphaStruct {
+            artist: row.get(0)?,
+            artistid: row.get(1)?,
+        })
+    }) {
+        Ok(rows) => rows,
+        Err(err) => {
+            eprintln!("Error executing artist_for_alpha query: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to execute query"})),
+            )
+                .into_response();
+        }
+    };
+
+    let mut artists = Vec::new();
+    for row in rows {
+        match row {
+            Ok(item) => artists.push(item),
+            Err(err) => {
+                eprintln!("ArtistForAlpha Error scanning row: {}", err);
+                continue;
+            }
+        }
+    }
+
+    Json(artists).into_response()
 }
 
-pub async fn albums_for_artist_handler() -> impl IntoResponse {
-    // Placeholder implementation
-    json!({"message": "Albums for artist endpoint"}).to_string()
+#[derive(Deserialize)]
+pub struct AlbumForAlphaQuery {
+    pub alpha: String,
 }
 
-pub async fn albums_for_artist_songs_handler() -> impl IntoResponse {
-    // Placeholder implementation
-    json!({"message": "Albums for artist songs endpoint"}).to_string()
+#[allow(non_snake_case)]
+#[derive(Debug, Clone)]
+struct AlbumForAlphaStruct {
+    albumid: String,
+}
+
+pub async fn album_for_alpha_handler(Query(params): Query<AlbumForAlphaQuery>) -> impl IntoResponse {
+    let db_path = match std::env::var("RUSIC_DB_PATH") {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("Missing RUSIC_DB_PATH: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "RUSIC_DB_PATH is not set"})),
+            )
+                .into_response();
+        }
+    };
+
+    let conn = match Connection::open(&db_path) {
+        Ok(conn) => conn,
+        Err(err) => {
+            eprintln!("Error opening database at {}: {}", db_path, err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to open database"})),
+            )
+                .into_response();
+        }
+    };
+
+    let mut stmt = match conn.prepare(
+        "SELECT DISTINCT album, albumid FROM startswith WHERE album_first_letter = ?1",
+    ) {
+        Ok(stmt) => stmt,
+        Err(err) => {
+            eprintln!("Error preparing album_for_alpha query: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to prepare query"})),
+            )
+                .into_response();
+        }
+    };
+
+    let rows = match stmt.query_map([params.alpha], |row| {
+        Ok(AlbumForAlphaStruct {
+            albumid: row.get(1)?,
+        })
+    }) {
+        Ok(rows) => rows,
+        Err(err) => {
+            eprintln!("Error executing album_for_alpha query: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to execute query"})),
+            )
+                .into_response();
+        }
+    };
+
+    let mut albums = Vec::new();
+    for row in rows {
+        match row {
+            Ok(item) => albums.push(item),
+            Err(err) => {
+                eprintln!("AlbumForAlpha Error scanning row: {}", err);
+                continue;
+            }
+        }
+    }
+
+    let mut album_list = Vec::new();
+    for alb in albums {
+        let mut stmt = match conn.prepare(
+            "SELECT DISTINCT album, albumid, httpthumbpath FROM music_images WHERE albumid = ?1",
+        ) {
+            Ok(stmt) => stmt,
+            Err(err) => {
+                eprintln!("Error preparing album image lookup: {}", err);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({"error": "Failed to prepare query"})),
+                )
+                    .into_response();
+            }
+        };
+
+        let image_rows = match stmt.query_map([alb.albumid], |row| {
+            Ok(AlbumStruct {
+                album: row.get(0)?,
+                albumid: row.get(1)?,
+                httpthumbpath: row.get(2)?,
+            })
+        }) {
+            Ok(rows) => rows,
+            Err(err) => {
+                eprintln!("Error executing album image lookup: {}", err);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({"error": "Failed to execute query"})),
+                )
+                    .into_response();
+            }
+        };
+
+        for row in image_rows {
+            match row {
+                Ok(item) => album_list.push(item),
+                Err(err) => {
+                    eprintln!("AlbumForAlpha image scan error: {}", err);
+                    continue;
+                }
+            }
+        }
+    }
+
+    Json(album_list).into_response()
+}
+
+#[derive(Deserialize)]
+pub struct AlbumsForArtistQuery {
+    #[serde(rename = "artistid", alias = "artid", alias = "artistId")]
+    pub artist_id: String,
+}
+
+pub async fn albums_for_artist_handler(Query(params): Query<AlbumsForArtistQuery>) -> impl IntoResponse {
+    let db_path = match std::env::var("RUSIC_DB_PATH") {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("Missing RUSIC_DB_PATH: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "RUSIC_DB_PATH is not set"})),
+            )
+                .into_response();
+        }
+    };
+
+    let conn = match Connection::open(&db_path) {
+        Ok(conn) => conn,
+        Err(err) => {
+            eprintln!("Error opening database at {}: {}", db_path, err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to open database"})),
+            )
+                .into_response();
+        }
+    };
+
+    let mut stmt = match conn.prepare(
+        "SELECT DISTINCT albumid, album, httpthumbpath FROM music_images WHERE artistid = ?1",
+    ) {
+        Ok(stmt) => stmt,
+        Err(err) => {
+            eprintln!("Error preparing albums_for_artist query: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to prepare query"})),
+            )
+                .into_response();
+        }
+    };
+
+    let rows = match stmt.query_map([params.artist_id], |row| {
+        Ok(AlbumStruct {
+            albumid: row.get(0)?,
+            album: row.get(1)?,
+            httpthumbpath: row.get(2)?,
+        })
+    }) {
+        Ok(rows) => rows,
+        Err(err) => {
+            eprintln!("Error executing albums_for_artist query: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to execute query"})),
+            )
+                .into_response();
+        }
+    };
+
+    let mut albums = Vec::new();
+    for row in rows {
+        match row {
+            Ok(item) => albums.push(item),
+            Err(err) => {
+                eprintln!("AlbumsForArtist Error scanning row: {}", err);
+                continue;
+            }
+        }
+    }
+
+    Json(albums).into_response()
+}
+
+#[derive(Deserialize)]
+pub struct AlbumsForArtistSongsQuery {
+    #[serde(rename = "albumId", alias = "albumid")]
+    pub album_id: String,
+}
+
+pub async fn albums_for_artist_songs_handler(Query(params): Query<AlbumsForArtistSongsQuery>) -> impl IntoResponse {
+    let db_path = match std::env::var("RUSIC_DB_PATH") {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("Missing RUSIC_DB_PATH: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "RUSIC_DB_PATH is not set"})),
+            )
+                .into_response();
+        }
+    };
+
+    let conn = match Connection::open(&db_path) {
+        Ok(conn) => conn,
+        Err(err) => {
+            eprintln!("Error opening database at {}: {}", db_path, err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to open database"})),
+            )
+                .into_response();
+        }
+    };
+
+    let mut stmt = match conn.prepare(
+        "SELECT id, rusicid, imgurl, playpath, artist, artistid, album, albumid, song, fullpath, extension, idx, page, fsizeresults FROM music WHERE albumid = ?1",
+    ) {
+        Ok(stmt) => stmt,
+        Err(err) => {
+            eprintln!("Error preparing albums_for_artist_songs query: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to prepare query"})),
+            )
+                .into_response();
+        }
+    };
+
+    let rows = match stmt.query_map([params.album_id], |row| {
+        Ok(MusicInfo {
+            id: row.get(0)?,
+            rusicid: row.get(1)?,
+            imgurl: row.get(2)?,
+            playpath: row.get(3)?,
+            artist: row.get(4)?,
+            artistid: row.get(5)?,
+            album: row.get(6)?,
+            albumid: row.get(7)?,
+            song: row.get(8)?,
+            fullpath: row.get(9)?,
+            extension: row.get(10)?,
+            idx: row.get(11)?,
+            page: row.get(12)?,
+            fsizeresults: row.get(13)?,
+        })
+    }) {
+        Ok(rows) => rows,
+        Err(err) => {
+            eprintln!("Error executing albums_for_artist_songs query: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to execute query"})),
+            )
+                .into_response();
+        }
+    };
+
+    let mut songs = Vec::new();
+    for row in rows {
+        match row {
+            Ok(item) => songs.push(item),
+            Err(err) => {
+                eprintln!("AlbumsForArtistSongs Error scanning row: {}", err);
+                continue;
+            }
+        }
+    }
+
+    Json(songs).into_response()
 }
 
 pub async fn song_pages_handler() -> impl IntoResponse {
-    // Placeholder implementation
-    json!({"message": "Song pages endpoint"}).to_string()
+    let db_path = match std::env::var("RUSIC_DB_PATH") {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("Missing RUSIC_DB_PATH: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "RUSIC_DB_PATH is not set"})),
+            )
+                .into_response();
+        }
+    };
+
+    let conn = match Connection::open(&db_path) {
+        Ok(conn) => conn,
+        Err(err) => {
+            eprintln!("Error opening database at {}: {}", db_path, err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to open database"})),
+            )
+                .into_response();
+        }
+    };
+
+    let mut stmt = match conn.prepare("SELECT DISTINCT page FROM music") {
+        Ok(stmt) => stmt,
+        Err(err) => {
+            eprintln!("Error preparing song_pages query: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to prepare query"})),
+            )
+                .into_response();
+        }
+    };
+
+    let rows = match stmt.query_map([], |row| row.get::<_, String>(0)) {
+        Ok(rows) => rows,
+        Err(err) => {
+            eprintln!("Error executing song_pages query: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to execute query"})),
+            )
+                .into_response();
+        }
+    };
+
+    let mut pages = Vec::new();
+    for row in rows {
+        match row {
+            Ok(page) => pages.push(page),
+            Err(err) => {
+                eprintln!("SongPages Error scanning row: {}", err);
+                continue;
+            }
+        }
+    }
+
+    Json(pages).into_response()
 }
 
-pub async fn songs_for_page_handler() -> impl IntoResponse {
-    // Placeholder implementation
-    json!({"message": "Songs for page endpoint"}).to_string()
+#[derive(Deserialize)]
+pub struct SongsForPageQuery {
+    pub page: String,
+}
+
+pub async fn songs_for_page_handler(Query(params): Query<SongsForPageQuery>) -> impl IntoResponse {
+    let db_path = match std::env::var("RUSIC_DB_PATH") {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("Missing RUSIC_DB_PATH: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "RUSIC_DB_PATH is not set"})),
+            )
+                .into_response();
+        }
+    };
+
+    let conn = match Connection::open(&db_path) {
+        Ok(conn) => conn,
+        Err(err) => {
+            eprintln!("Error opening database at {}: {}", db_path, err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to open database"})),
+            )
+                .into_response();
+        }
+    };
+
+    let mut stmt = match conn.prepare(
+        "SELECT id, rusicid, imgurl, playpath, artist, artistid, album, albumid, song, fullpath, extension, idx, page, fsizeresults FROM music WHERE page = ?1",
+    ) {
+        Ok(stmt) => stmt,
+        Err(err) => {
+            eprintln!("Error preparing songs_for_page query: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to prepare query"})),
+            )
+                .into_response();
+        }
+    };
+
+    let rows = match stmt.query_map([params.page], |row| {
+        Ok(MusicInfo {
+            id: row.get(0)?,
+            rusicid: row.get(1)?,
+            imgurl: row.get(2)?,
+            playpath: row.get(3)?,
+            artist: row.get(4)?,
+            artistid: row.get(5)?,
+            album: row.get(6)?,
+            albumid: row.get(7)?,
+            song: row.get(8)?,
+            fullpath: row.get(9)?,
+            extension: row.get(10)?,
+            idx: row.get(11)?,
+            page: row.get(12)?,
+            fsizeresults: row.get(13)?,
+        })
+    }) {
+        Ok(rows) => rows,
+        Err(err) => {
+            eprintln!("Error executing songs_for_page query: {}", err);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to execute query"})),
+            )
+                .into_response();
+        }
+    };
+
+    let mut songs = Vec::new();
+    for row in rows {
+        match row {
+            Ok(item) => songs.push(item),
+            Err(err) => {
+                eprintln!("SongsForPage Error scanning row: {}", err);
+                continue;
+            }
+        }
+    }
+
+    Json(songs).into_response()
 }
 
 pub async fn playlist_check_handler() -> impl IntoResponse {
-    // Placeholder implementation
-    json!({"message": "Playlist check endpoint"}).to_string()
+    Json(json!({"exists": playlist_check()})).into_response()
 }
 
-pub async fn create_empty_playlist_handler() -> impl IntoResponse {
-    // Placeholder implementation
-    json!({"message": "Create empty playlist endpoint"}).to_string()
+pub fn playlist_check() -> bool {
+    let db_path = match std::env::var("RUSIC_DB_PATH") {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("Missing RUSIC_DB_PATH: {}", err);
+            return false;
+        }
+    };
+
+    let conn = match Connection::open(&db_path) {
+        Ok(conn) => conn,
+        Err(err) => {
+            eprintln!("Error opening database at {}: {}", db_path, err);
+            return false;
+        }
+    };
+
+    let mut stmt = match conn.prepare("SELECT 1 FROM playlists LIMIT 1") {
+        Ok(stmt) => stmt,
+        Err(err) => {
+            eprintln!("Error preparing playlist check query: {}", err);
+            return false;
+        }
+    };
+
+    let mut rows = match stmt.query([]) {
+        Ok(rows) => rows,
+        Err(err) => {
+            eprintln!("Error executing playlist check query: {}", err);
+            return false;
+        }
+    };
+
+    match rows.next() {
+        Ok(Some(_)) => true,
+        Ok(None) => false,
+        Err(err) => {
+            eprintln!("Error reading playlist check result: {}", err);
+            false
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct CreateEmptyPlaylistQuery {
+    #[serde(rename = "plname", alias = "name", alias = "playlistName")]
+    pub plname: String,
+}
+
+pub async fn create_empty_playlist_handler(
+    Query(params): Query<CreateEmptyPlaylistQuery>,
+) -> impl IntoResponse {
+    let trimmed_name = params.plname.trim();
+    if trimmed_name.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "plname is required"})),
+        )
+            .into_response();
+    }
+
+    let playlist = create_empty_playlist(trimmed_name);
+    Json(playlist).into_response()
+}
+
+fn create_md5_hash(aname: &str) -> String {
+    format!("{:x}", md5::compute(aname.as_bytes()))
+}
+
+pub fn create_empty_playlist(plname: &str) -> PlayList {
+    let pllist = PlayList {
+        rusicid: create_md5_hash(plname),
+        name: plname.to_string(),
+        songs: "None".to_string(),
+        numsongs: "0".to_string(),
+    };
+
+    let db_path = match std::env::var("RUSIC_DB_PATH") {
+        Ok(path) => path,
+        Err(err) => {
+            eprintln!("Missing RUSIC_DB_PATH: {}", err);
+            return pllist;
+        }
+    };
+
+    let conn = match Connection::open(&db_path) {
+        Ok(conn) => conn,
+        Err(err) => {
+            eprintln!("Error opening database at {}: {}", db_path, err);
+            return pllist;
+        }
+    };
+
+    if let Err(err) = conn.execute(
+        "INSERT INTO playlists (rusicid, name, songs, numsongs) VALUES (?1, ?2, ?3, ?4)",
+        (&pllist.rusicid, &pllist.name, &pllist.songs, &pllist.numsongs),
+    ) {
+        eprintln!("Error inserting playlist: {}", err);
+    }
+
+    pllist
 }
 
 pub async fn create_random_playlist_handler() -> impl IntoResponse {

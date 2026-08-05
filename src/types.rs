@@ -31,6 +31,21 @@ pub struct AlbumCount {
 
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArtistForAlphaStruct {
+    pub artist: String,
+    pub artistid: String,
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AlbumStruct {
+    pub album: String,
+    pub albumid: String,
+    pub httpthumbpath: String,
+}
+
+#[allow(non_snake_case)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SongCount {
     pub alpha: String,
     pub count: i64,
