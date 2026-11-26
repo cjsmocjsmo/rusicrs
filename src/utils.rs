@@ -1041,11 +1041,6 @@ pub async fn cover_art_from_play_path_handler() -> impl IntoResponse {
     json!({"message": "Cover art from play path endpoint"}).to_string()
 }
 
-pub async fn play_music_handler() -> impl IntoResponse {
-    // Placeholder implementation
-    json!({"message": "Play music endpoint"}).to_string()
-}
-
 pub async fn play_playlist_handler() -> impl IntoResponse {
     // Placeholder implementation
     json!({"message": "Play playlist endpoint"}).to_string()

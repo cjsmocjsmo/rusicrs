@@ -8,6 +8,7 @@ use tower_http::cors::{CorsLayer, Any};
 
 pub mod utils;
 pub mod types;
+pub mod audio;
 
 #[tokio::main]
 async fn main() {
@@ -43,7 +44,7 @@ async fn main() {
         .route("/removesongfromplaylist", get(utils::remove_song_from_playlist_handler))
         .route("/deleteplaylist", get(utils::delete_playlist_handler))
         .route("/coverartfromplaypath", get(utils::cover_art_from_play_path_handler))
-        .route("/playmusic", get(utils::play_music_handler))
+        .route("/playmusic", get(audio::play_music_handler))
         .route("/playplaylist", get(utils::play_playlist_handler));
 
     //Define the address to run the server on
